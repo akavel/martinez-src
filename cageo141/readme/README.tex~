@@ -1,0 +1,189 @@
+\documentclass[a4paper]{article}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[a4paper, body={17cm, 26cm}]{geometry}
+\usepackage{listings}
+
+
+\begin{document}
+\lstset{language=C++, basicstyle=\small, showstringspaces=false}
+
+\begin{center}
+\textbf{Guidelines for using the code}
+\end{center}
+
+\vspace{1cm}
+\noindent In this document you will find the guidelines for using the code on a Linux system.
+
+%
+% Section
+%
+\section{Comparative of algorithms for computing Boolean operations}
+
+If you want to compare the execution times of the different implemented algorithms do the following:
+
+\begin{verbatim}
+$ make
+$ ./clip file_subject file_clipping file_result [I|U|D|X]
+\end{verbatim}
+
+\noindent where:
+
+\begin{itemize}
+ \item \verb+file_subject+ is the file containing the subject polygon
+ \item \verb+file_clipping+ is the file containing the clipping polygon
+ \item \verb+file_result+ will be used to save the result of the operation
+ \item the last parameter is optional and indicates the kind of Boolean operation:
+   \begin{itemize}
+    \item I stands for Intersection (the default operation)
+    \item U stands for Union
+    \item D stands for Difference between the subject and clipping polygons
+    \item X stands for eXclusive OR (Symmetric difference) between the subject and clipping polygons
+   \end{itemize}
+\end{itemize}
+
+%
+% Section
+%
+\section{Format of polygon files}
+You can find polygons in the directories \textit{polygons/random} and \textit{polygons/worldmap}. In the first directory you will find polygons up to 10000 vertices. In the \textit{polygons/worldmap} directory you will 
+find a worldmap polygon with 76696 vertices. We suggest to try:
+
+\begin{verbatim}
+$ ./clip polygons/worldmap/worldmap polygons/worldmap/worldmap_moved_5_units_upward_and_rightward \
+  /dev/null
+\end{verbatim}
+
+You can also create your own polygons. A file polygon is an ASCII file with the following structure:
+
+\begin{verbatim}
+<number of contours>
+<number of vertices of first contour> <level of first contour>
+<vertex-list of first contour>
+<number of vertices of second contour> <level of second contour>
+<vertex-list of second contour>
+...
+\end{verbatim}
+
+The level field is not used in this implementation, but you must include it. Next, you can see the content of the file \textit{polygonwithtwocontours}, that belongs
+ to the directory \textit{polygons}:
+
+\begin{verbatim}
+2
+3 1
+	0.1 0.1
+	0.3 0.1
+	0.2 0.3
+3 1
+	0.6 0.1
+	0.8 0.1
+	0.7 0.3
+\end{verbatim}
+
+Contours can be described in clockwise or counterclockwise order.
+%
+% Section
+%
+\section{Rendering the result of Boolean operations}
+
+If you want to render the result of a Boolean operation you should have installed glut and opengl and type:
+
+\begin{verbatim}
+$ make -f makefile.guiglut
+$ ./guiglut file_subject file_clipping G|V|M [I|U|D|X]
+\end{verbatim}
+
+\noindent where,
+
+\begin{itemize}
+ \item \verb+file_subject+ is the file containing the subject polygon
+ \item \verb+file_clipping+ is the file containing the clipping polygon
+ \item the third parameter indicates the kind of algorithm used to compute the Boolean operation
+   \begin{itemize}
+     \item G stands for Greiner-Hormann
+     \item V stands for Alan Murta's implementation of Vatti's algorithm
+     \item M stands for our algorithm
+   \end{itemize}
+ \item the last parameter is optional, and indicates the kind of Boolean operation
+   \begin{itemize}
+     \item I stands for Intersection (the default operation)
+     \item U stands for Union
+     \item D stands for set the Difference subject-clipping polygons
+    \item X stands for eXclusive OR (Symmetric difference) between the subject and clipping polygons
+   \end{itemize}
+\end{itemize}
+
+Note that when you run the program you can see the subject and clipping polygons. The subject polygon is shaded green, while the clipping
+polygon is rendered as translucent red. You can type the following keys:
+
+\begin{itemize}
+ \item R: for toggling on/off rendering the result of the operation
+ \item S: for toggling on/off rendering the subject polygon.
+ \item C: for toggling on/off rendering the clipping polygon.
+ \item W: for switching rendering the polygons from filled to wireframe.
+ \item z: for zoom out.
+ \item Z: for zoom in.
+ \item Arrow keys: to translate up/down/left/right the polygons.
+\end{itemize}
+
+%
+% Section
+%
+
+\section{Implementation files}
+
+You can take a look to the implementation of the algorithms. Greiner and Hormann's algorithm is implemented in the \textit{greiner.h} and \textit{greiner.cpp} files.
+The implementation does not support the degenerate case of a vertex lying on an edge of the other polygon. We have not neither extended the algorithm
+to compute the union and difference operation on polygons with several contours (the intersection can be computed).
+
+We have included the Alan Murta's implementation of Vatti's algorithm (files \textit{gpc.h} and \textit{gpc.cpp}). Please, note that this code has its own
+license (included in the file \textit{gpc.cpp}). Alan Murta's implementation is very robust, it includes extensions to the algorithm to deal with edges parallel to the sweep line, and to deal with overlapping edges.
+
+Finally, the implementation of our algorithm can be found in the files \textit{martinez.h} and \textit{martinez.cpp}.
+
+%
+% Section
+%
+
+\section{Polygons with several components and with holes}
+
+Suppose two polygons such that both polygons have one single contour and neither of the polygons has a hole. The result of a Boolean operation on the two polygons can be a polygon 
+with several contours and/or with holes. For these polygons, the algorithm described in the paper ``A new algorithm for computing Boolean operations on polygons'' computes correctly
+the different contours and holes of the Boolean operation. However, the algorithm does not compute the topological information describing which contours---holes---lie 
+whithin which contours. In
+order to compute this information I have developed the member function \lstinline+computeHoles+ of the class \lstinline+Polygon+. This function also gives an
+orientation---clockwise or counterclockwise---to the different contours taking into account the contour depth. The following program shows how the 
+\lstinline+computeHoles+ member function can be used:
+
+\begin{lstlisting}
+int main ()
+{
+   Polygon p ("polygons/samples/polygonwithholes");
+   cout << "Number of contours: " << p.ncontours () << '\n';
+   cout << "Number of vertices: " << p.nvertices () << '\n';
+   p.computeHoles ();
+   // show information
+   for (int i = 0; i < p.ncontours (); i++) {
+      cout << "--- new contour ---\n";
+      cout << "Identifier: " << i << '\n';
+      cout << (p.contour (i).external () ? "External" : "Internal") << " contour\n";
+      cout << "Orientation: " << (p.contour (i).clockwise () ? "clockwise" : "counterclockwise") 
+           << '\n';
+      cout << "Holes identifiers: ";
+      for (int j = 0; j < p.contour (i).nholes (); j++)
+         cout << p.contour (i).hole (j) << "  ";
+      cout << '\n';
+      cout << "Vertices: ";
+      for (int j = 0; j < p.contour (i).nvertices (); j++)
+         cout << p.contour (i).vertex (j) << "  ";
+      cout << '\n';
+   }
+   return 0;
+}
+\end{lstlisting}
+
+The \lstinline+computeHoles+ function makes a second plane sweep in order to compute the holes associated to each contour. Its execution time is $O(n \log n)$, where $n$
+is the number of edges of the polygon---of all its contours. Although, the \lstinline+computeHoles+ function is quite efficient the computation of holes can be
+integrated in the \lstinline+Connector+ class in order to make a single plane sweep---I hope to program this in the future.
+\end{document}
