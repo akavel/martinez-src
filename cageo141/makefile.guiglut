@@ -1,6 +1,10 @@
 CXX = g++
 CXXFLAGS = -O3
+ifeq ($(shell uname),Darwin)
+LDFLAGS = -lm -framework GLUT -framework OpenGL
+else
 LDFLAGS = -lm -lglut -lGLU
+endif
 TARGET = guiglut
 OBJS = $(TARGET).o greiner.o polygon.o utilities.o connector.o gpc.o martinez.o
 
